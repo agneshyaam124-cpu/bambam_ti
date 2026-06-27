@@ -1,215 +1,389 @@
-const USERS = [
-  { id: "admin", password: "2026", role: "admin", name: "관리자" },
-  { id: "10101", password: "1234", role: "student", studentId: "10101" },
-  { id: "10102", password: "1234", role: "student", studentId: "10102" },
-  { id: "10103", password: "1234", role: "student", studentId: "10103" },
-];
+// DOM Elements - Navigation
+const navButtons = document.querySelectorAll('.nav-button');
+const viewSections = document.querySelectorAll('.view-section');
+const yearSelect = document.getElementById('yearSelect');
+const yearBadges = document.querySelectorAll('.badge');
 
-const STUDENTS = [
-  {
-    id: "10101",
-    name: "김코딩",
-    photo: "assets/10101_김코딩.jpg",
-    grades: {
-      "정보 수행평가": "A",
-      "웹앱 프로젝트": "92점",
-      "디지털 윤리 퀴즈": "88점",
-      "수업 참여도": "상",
-    },
-    traits: [
-      "문제 해결 과정을 차분히 설명합니다.",
-      "새 도구를 시도할 때 기록을 꼼꼼히 남깁니다.",
-      "제출 전 확인 습관을 더 연습하면 좋습니다.",
-    ],
-    teacherMemo: "프론트엔드 구조 이해가 빠르며, 팀원 질문에 답하는 태도가 좋습니다.",
-  },
-  {
-    id: "10102",
-    name: "박개발",
-    photo: "assets/10102_박개발.jpg",
-    grades: {
-      "정보 수행평가": "B+",
-      "웹앱 프로젝트": "86점",
-      "디지털 윤리 퀴즈": "91점",
-      "수업 참여도": "중상",
-    },
-    traits: [
-      "협업 중 역할 분담을 잘 지킵니다.",
-      "UI 수정 아이디어를 자주 제안합니다.",
-      "프로젝트 범위를 작게 나누는 연습이 필요합니다.",
-    ],
-    teacherMemo: "기능 구현 의욕이 높고, 오류가 날 때 원인을 함께 추적하려는 태도가 좋습니다.",
-  },
-  {
-    id: "10103",
-    name: "이교사",
-    photo: "assets/10103_이교사.jpg",
-    grades: {
-      "정보 수행평가": "A-",
-      "웹앱 프로젝트": "89점",
-      "디지털 윤리 퀴즈": "95점",
-      "수업 참여도": "상",
-    },
-    traits: [
-      "학습 내용을 자기 언어로 정리합니다.",
-      "개선할 지점을 발견하면 근거를 함께 제시합니다.",
-      "코드 주석을 더 구체적으로 쓰면 좋습니다.",
-    ],
-    teacherMemo: "질문의 초점이 좋고, 개선 방향을 토의하는 데 적극적입니다.",
-  },
-];
+// DOM Elements - Dashboard
+const dashTaskList = document.getElementById('dashTaskList');
+const dashClassList = document.getElementById('dashClassList');
 
-const loginForm = document.querySelector("#loginForm");
-const userIdInput = document.querySelector("#userId");
-const passwordInput = document.querySelector("#password");
-const loginMessage = document.querySelector("#loginMessage");
-const logoutButton = document.querySelector("#logoutButton");
-const loginView = document.querySelector("#loginView");
-const studentView = document.querySelector("#studentView");
-const adminView = document.querySelector("#adminView");
+// DOM Elements - Class
+const studentListEl = document.getElementById('studentList');
+const studentDetailArea = document.getElementById('studentDetailArea');
+const emptyStudentSelection = document.getElementById('emptyStudentSelection');
+const detailStudentName = document.getElementById('detailStudentName');
+const detailStudentStatus = document.getElementById('detailStudentStatus');
+const recordForm = document.getElementById('recordForm');
+const recordTimeline = document.getElementById('recordTimeline');
+const privacyCheck = document.getElementById('privacyCheck');
 
-let currentUser = null;
+// DOM Elements - Tasks
+const btnAddTask = document.getElementById('btnAddTask');
+const btnImportRoutine = document.getElementById('btnImportRoutine');
+const taskFormPanel = document.getElementById('taskFormPanel');
+const taskForm = document.getElementById('taskForm');
+const btnCancelTask = document.getElementById('btnCancelTask');
+const listTodo = document.getElementById('listTodo');
+const listDone = document.getElementById('listDone');
+const countTodo = document.getElementById('countTodo');
+const countDone = document.getElementById('countDone');
 
-loginForm.addEventListener("submit", (event) => {
-  event.preventDefault();
+// --- STATE ---
+let state = {
+  activeYear: "2026",
+  selectedStudentId: null,
+  students: [
+    { id: "ID-001", name: "학생 1번", status: "안정" },
+    { id: "ID-002", name: "학생 2번", status: "관찰요망" },
+    { id: "ID-003", name: "학생 3번", status: "상담진행중" },
+    { id: "ID-004", name: "학생 4번", status: "안정" },
+  ],
+  records: [], // { id, year, studentId, date, category, content }
+  tasks: [] // { id, year, title, dueDate, status (todo/done) }
+};
 
-  const id = userIdInput.value.trim();
-  const password = passwordInput.value;
-  const user = USERS.find((item) => item.id === id && item.password === password);
+// --- INITIALIZATION ---
+function init() {
+  loadData();
+  setupEventListeners();
+  renderAll();
+}
 
-  if (!user) {
-    loginMessage.textContent = "아이디 또는 비밀번호가 올바르지 않습니다.";
-    passwordInput.value = "";
-    passwordInput.focus();
-    return;
-  }
-
-  currentUser = user;
-  loginMessage.textContent = "";
-  loginForm.reset();
-
-  if (user.role === "admin") {
-    renderAdminDashboard();
+function loadData() {
+  const savedData = localStorage.getItem('teacherArchiveState');
+  if (savedData) {
+    const parsed = JSON.parse(savedData);
+    state.records = parsed.records || [];
+    state.tasks = parsed.tasks || [];
+    // Reset selection on load
+    state.selectedStudentId = null; 
   } else {
-    const student = STUDENTS.find((item) => item.id === user.studentId);
-    renderStudentPage(student);
+    // Demo data for fresh start
+    state.tasks = [
+      { id: "t1", year: "2026", title: "주간 학습안내장 작성", dueDate: getTodayStr(), status: "todo" },
+      { id: "t2", year: "2026", title: "학부모 총회 준비", dueDate: getDaysLaterStr(2), status: "todo" },
+      { id: "t3", year: "2026", title: "학생 기초조사서 취합", dueDate: getDaysLaterStr(-1), status: "done" }
+    ];
+    state.records = [
+      { id: "r1", year: "2026", studentId: "ID-002", date: getDaysLaterStr(-2), category: "관찰", content: "수업 시간 집중력 저하 및 잦은 자리 이탈 관찰됨." },
+      { id: "r2", year: "2026", studentId: "ID-003", date: getTodayStr(), category: "상담", content: "교우 관계 어려움 호소. 자리 배치 조정 약속함." }
+    ];
+    saveData();
   }
-});
-
-logoutButton.addEventListener("click", () => {
-  currentUser = null;
-  showOnly(loginView);
-  logoutButton.classList.add("hidden");
-  userIdInput.focus();
-});
-
-function showOnly(targetView) {
-  [loginView, studentView, adminView].forEach((view) => view.classList.add("hidden"));
-  targetView.classList.remove("hidden");
+  
+  // Set UI year selector
+  yearSelect.value = state.activeYear;
 }
 
-function renderStudentPage(student) {
-  if (!student) {
-    loginMessage.textContent = "학생 정보를 찾을 수 없습니다.";
-    showOnly(loginView);
+function saveData() {
+  const dataToSave = {
+    records: state.records,
+    tasks: state.tasks
+  };
+  localStorage.setItem('teacherArchiveState', JSON.stringify(dataToSave));
+}
+
+function setupEventListeners() {
+  // Navigation
+  navButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      navButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const targetId = btn.getAttribute('data-target');
+      viewSections.forEach(sec => sec.classList.add('hidden'));
+      document.getElementById(targetId).classList.remove('hidden');
+    });
+  });
+
+  // Year Selection
+  yearSelect.addEventListener('change', (e) => {
+    state.activeYear = e.target.value;
+    state.selectedStudentId = null; // Clear selection on year change
+    renderAll();
+  });
+
+  // Class: Record Submit
+  recordForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!privacyCheck.checked) {
+      alert("개인 식별 정보를 포함하지 않았음에 동의해야 합니다.");
+      return;
+    }
+    
+    const newRecord = {
+      id: "r_" + Date.now(),
+      year: state.activeYear,
+      studentId: state.selectedStudentId,
+      date: document.getElementById('recordDate').value,
+      category: document.getElementById('recordCategory').value,
+      content: document.getElementById('recordContent').value
+    };
+    
+    state.records.push(newRecord);
+    saveData();
+    recordForm.reset();
+    renderClassTimeline();
+    renderDashboard();
+  });
+
+  // Tasks: Toggle Add Form
+  btnAddTask.addEventListener('click', () => {
+    taskFormPanel.classList.remove('hidden');
+    taskForm.reset();
+    document.getElementById('taskId').value = '';
+    document.getElementById('taskFormTitle').textContent = "새 업무 추가";
+  });
+  
+  btnCancelTask.addEventListener('click', () => {
+    taskFormPanel.classList.add('hidden');
+  });
+
+  // Tasks: Form Submit
+  taskForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const idInput = document.getElementById('taskId').value;
+    const title = document.getElementById('taskTitle').value;
+    const dueDate = document.getElementById('taskDue').value;
+
+    if (idInput) {
+      // Edit
+      const task = state.tasks.find(t => t.id === idInput);
+      if (task) {
+        task.title = title;
+        task.dueDate = dueDate;
+      }
+    } else {
+      // Add
+      state.tasks.push({
+        id: "t_" + Date.now(),
+        year: state.activeYear,
+        title: title,
+        dueDate: dueDate,
+        status: "todo"
+      });
+    }
+    
+    saveData();
+    taskFormPanel.classList.add('hidden');
+    renderTasks();
+    renderDashboard();
+  });
+
+  // Tasks: Import Routine Template
+  btnImportRoutine.addEventListener('click', () => {
+    if (confirm("3월 개학 준비 루틴 템플릿을 업무 목록에 복제하시겠습니까?")) {
+      const routineTasks = [
+        { id: "tr_" + Date.now() + "1", year: state.activeYear, title: "[루틴] 교실 환경 미화 및 청소", dueDate: "", status: "todo" },
+        { id: "tr_" + Date.now() + "2", year: state.activeYear, title: "[루틴] 학생 기초조사서 배부", dueDate: "", status: "todo" },
+        { id: "tr_" + Date.now() + "3", year: state.activeYear, title: "[루틴] 학급 규칙 정하기 (첫 주)", dueDate: "", status: "todo" }
+      ];
+      state.tasks = [...state.tasks, ...routineTasks];
+      saveData();
+      renderTasks();
+      renderDashboard();
+    }
+  });
+}
+
+// --- RENDER LOGIC ---
+
+function renderAll() {
+  // Update year badges
+  yearBadges.forEach(b => b.textContent = state.activeYear);
+  
+  renderDashboard();
+  renderClassSidebar();
+  renderClassTimeline();
+  renderTasks();
+}
+
+function renderDashboard() {
+  // Filter by year
+  const yearTasks = state.tasks.filter(t => t.year === state.activeYear && t.status === 'todo');
+  const yearRecords = state.records.filter(r => r.year === state.activeYear);
+  
+  // Sort tasks by due date
+  yearTasks.sort((a, b) => {
+    if (!a.dueDate) return 1;
+    if (!b.dueDate) return -1;
+    return new Date(a.dueDate) - new Date(b.dueDate);
+  });
+  
+  // Render Tasks (Max 5)
+  dashTaskList.innerHTML = '';
+  if (yearTasks.length === 0) {
+    dashTaskList.innerHTML = '<p class="dash-item" style="color:var(--text-muted)">대기 중인 업무가 없습니다.</p>';
+  } else {
+    yearTasks.slice(0, 5).forEach(task => {
+      const isOverdue = task.dueDate && task.dueDate < getTodayStr();
+      dashTaskList.innerHTML += `
+        <div class="dash-item">
+          <span>${task.title}</span>
+          ${task.dueDate ? `<span class="badge" style="${isOverdue ? 'background-color:var(--danger-bg);color:var(--danger);' : ''}">${isOverdue ? '지연' : task.dueDate}</span>` : ''}
+        </div>
+      `;
+    });
+  }
+
+  // Render Class Alerts (Recent records or students needing attention)
+  dashClassList.innerHTML = '';
+  const studentsNeedingAttention = state.students.filter(s => s.status !== "안정");
+  if (studentsNeedingAttention.length === 0) {
+    dashClassList.innerHTML = '<p class="dash-item" style="color:var(--text-muted)">특별히 주목할 학생 알림이 없습니다.</p>';
+  } else {
+    studentsNeedingAttention.forEach(st => {
+      const isDanger = st.status === "관찰요망";
+      dashClassList.innerHTML += `
+        <div class="dash-item">
+          <span>${st.name} (${st.id})</span>
+          <span class="status-badge ${isDanger ? 'attention' : ''}">${st.status}</span>
+        </div>
+      `;
+    });
+  }
+}
+
+function renderClassSidebar() {
+  studentListEl.innerHTML = '';
+  state.students.forEach(st => {
+    const li = document.createElement('li');
+    const btn = document.createElement('button');
+    btn.innerHTML = `<span>${st.id}</span> <span class="status-badge">${st.status}</span>`;
+    
+    if (state.selectedStudentId === st.id) {
+      btn.classList.add('active');
+    }
+    
+    btn.addEventListener('click', () => {
+      state.selectedStudentId = st.id;
+      renderClassSidebar(); // Re-render to update active state
+      renderClassTimeline();
+    });
+    
+    li.appendChild(btn);
+    studentListEl.appendChild(li);
+  });
+}
+
+function renderClassTimeline() {
+  if (!state.selectedStudentId) {
+    studentDetailArea.classList.add('hidden');
+    emptyStudentSelection.classList.remove('hidden');
     return;
   }
 
-  studentView.innerHTML = `
-    <div class="view-header">
-      <div class="view-title">
-        <p class="eyebrow">Student</p>
-        <h2>${student.name} 학생 페이지</h2>
-        <p>로그인한 학생의 학습 현황을 확인합니다.</p>
-      </div>
-    </div>
+  studentDetailArea.classList.remove('hidden');
+  emptyStudentSelection.classList.add('hidden');
 
-    <div class="student-layout">
-      <article class="student-profile">
-        <img class="student-photo" src="${student.photo}" alt="${student.name} 학생 사진" />
-        <div class="profile-body">
-          <h3>${student.name}</h3>
-          <p class="student-number">학번 ${student.id}</p>
-          <div class="tag-row" aria-label="학습 키워드">
-            <span class="tag">정보</span>
-            <span class="tag">프로젝트</span>
+  const student = state.students.find(s => s.id === state.selectedStudentId);
+  detailStudentName.textContent = student.name + " (" + student.id + ")";
+  detailStudentStatus.textContent = student.status;
+  
+  // Set default date
+  document.getElementById('recordDate').value = getTodayStr();
+
+  // Filter records
+  const sRecords = state.records.filter(r => r.year === state.activeYear && r.studentId === state.selectedStudentId);
+  
+  recordTimeline.innerHTML = '';
+  if (sRecords.length === 0) {
+    recordTimeline.innerHTML = '<p style="color:var(--text-muted)">이 학년도의 기록이 없습니다.</p>';
+    return;
+  }
+  
+  // Sort descending
+  sRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  sRecords.forEach(r => {
+    const markChar = r.category.charAt(0); // 관, 상, 지
+    recordTimeline.innerHTML += `
+      <div class="timeline-item">
+        <div class="timeline-marker">${markChar}</div>
+        <div class="timeline-content">
+          <div class="timeline-header">
+            <strong>${r.category}</strong>
+            <span>${r.date}</span>
           </div>
+          <div class="timeline-body">${r.content}</div>
         </div>
-      </article>
-
-      <div class="content-stack">
-        ${renderGrades(student.grades, false, `gradesTitle-${student.id}`)}
-        ${renderTraits(student)}
       </div>
+    `;
+  });
+}
+
+function renderTasks() {
+  const yearTasks = state.tasks.filter(t => t.year === state.activeYear);
+  const todos = yearTasks.filter(t => t.status === 'todo');
+  const dones = yearTasks.filter(t => t.status === 'done');
+
+  countTodo.textContent = todos.length;
+  countDone.textContent = dones.length;
+
+  listTodo.innerHTML = '';
+  todos.forEach(t => listTodo.appendChild(createTaskCard(t)));
+
+  listDone.innerHTML = '';
+  dones.forEach(t => listDone.appendChild(createTaskCard(t)));
+}
+
+function createTaskCard(task) {
+  const div = document.createElement('div');
+  div.className = 'task-card';
+  
+  const isOverdue = task.dueDate && task.dueDate < getTodayStr() && task.status !== 'done';
+  const dueClass = isOverdue ? '' : 'safe';
+  
+  div.innerHTML = `
+    <div class="task-card-header">
+      <span class="task-card-title" style="${task.status === 'done' ? 'text-decoration: line-through; color: var(--text-muted);' : ''}">${task.title}</span>
+    </div>
+    ${task.dueDate ? `<span class="task-card-due ${dueClass}">${task.dueDate}</span>` : '<span class="task-card-due safe">기한 없음</span>'}
+    <div class="task-actions">
+      ${task.status === 'todo' ? `<button class="text-button" onclick="toggleTask('${task.id}')">완료하기</button>` : `<button class="text-button" onclick="toggleTask('${task.id}')" style="color:var(--text-muted)">되돌리기</button>`}
+      <button class="text-button" style="color:var(--danger); margin-left:8px;" onclick="deleteTask('${task.id}')">삭제</button>
     </div>
   `;
-
-  showOnly(studentView);
-  logoutButton.classList.remove("hidden");
+  return div;
 }
 
-function renderAdminDashboard() {
-  adminView.innerHTML = `
-    <div class="view-header">
-      <div class="view-title">
-        <p class="eyebrow">Admin</p>
-        <h2>관리자 대시보드</h2>
-        <p>학생 3명의 학습 현황을 한 화면에서 비교합니다.</p>
-      </div>
-    </div>
+// Global functions for inline onclick handlers
+window.toggleTask = function(taskId) {
+  const task = state.tasks.find(t => t.id === taskId);
+  if (task) {
+    task.status = task.status === 'todo' ? 'done' : 'todo';
+    saveData();
+    renderTasks();
+    renderDashboard();
+  }
+};
 
-    <section class="admin-grid" aria-label="전체 학생 정보">
-      ${STUDENTS.map(renderStudentCard).join("")}
-    </section>
-  `;
+window.deleteTask = function(taskId) {
+  if (confirm('이 업무를 삭제하시겠습니까?')) {
+    state.tasks = state.tasks.filter(t => t.id !== taskId);
+    saveData();
+    renderTasks();
+    renderDashboard();
+  }
+};
 
-  showOnly(adminView);
-  logoutButton.classList.remove("hidden");
+// Helpers
+function getTodayStr() {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
 
-function renderStudentCard(student) {
-  return `
-    <article class="student-card">
-      <img class="student-photo" src="${student.photo}" alt="${student.name} 학생 사진" />
-      <div class="student-card-body">
-        <h3>${student.name}</h3>
-        <p class="student-number">학번 ${student.id}</p>
-        ${renderGrades(student.grades, true, `gradesTitle-${student.id}`)}
-        ${renderTraits(student)}
-      </div>
-    </article>
-  `;
+function getDaysLaterStr(days) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
 
-function renderGrades(grades, compact = false, headingId = "gradesTitle") {
-  const rows = Object.entries(grades)
-    .map(([label, value]) => `<tr><th scope="row">${label}</th><td>${value}</td></tr>`)
-    .join("");
-
-  return `
-    <section aria-labelledby="${headingId}">
-      <div class="section-title">
-        <h3 id="${headingId}">성적 정보</h3>
-      </div>
-      <table class="grade-table ${compact ? "compact-table" : ""}">
-        <tbody>${rows}</tbody>
-      </table>
-    </section>
-  `;
-}
-
-function renderTraits(student) {
-  return `
-    <section aria-labelledby="traitsTitle-${student.id}">
-      <div class="section-title">
-        <h3 id="traitsTitle-${student.id}">학습 특성 및 교사 메모</h3>
-      </div>
-      <ul class="memo-list">
-        ${student.traits.map((trait) => `<li>${trait}</li>`).join("")}
-        <li>${student.teacherMemo}</li>
-      </ul>
-    </section>
-  `;
-}
-
-showOnly(loginView);
+// Kickoff
+init();

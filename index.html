@@ -3,62 +3,195 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>학생 정보 조회</title>
+    <title>교사 교육활동 AI 아카이브</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
+    <!-- Global Navigation Bar -->
     <header class="topbar">
-      <div>
-        <p class="eyebrow">Student Portal</p>
-        <h1>학생 정보 조회</h1>
+      <div class="topbar-brand">
+        <div class="logo-icon"></div>
+        <h1>AI Archive</h1>
       </div>
-      <button id="logoutButton" class="ghost-button hidden" type="button">로그아웃</button>
+      <nav class="topbar-nav">
+        <button class="nav-button active" data-target="dashboardView">대시보드</button>
+        <button class="nav-button" data-target="classView">학급관리</button>
+        <button class="nav-button" data-target="taskView">업무관리</button>
+      </nav>
+      <div class="topbar-controls">
+        <div class="year-selector">
+          <label for="yearSelect" class="visually-hidden">학년도 선택</label>
+          <select id="yearSelect">
+            <option value="2026">2026학년도 (현재)</option>
+            <option value="2025">2025학년도</option>
+            <option value="2024">2024학년도</option>
+          </select>
+        </div>
+      </div>
     </header>
 
     <main id="app" class="app-shell">
-      <section id="loginView" class="login-layout" aria-labelledby="loginTitle">
-        <div class="intro-panel">
-          <p class="eyebrow">Class Information</p>
-          <h2>학생별 학습 현황을 간단하게 확인합니다.</h2>
-          <p>
-            아이디와 비밀번호로 로그인하면 학생별 성적, 학습 특성, 교사 메모를
-            한 화면에서 확인할 수 있습니다.
-          </p>
+      
+      <!-- DASHBOARD VIEW -->
+      <section id="dashboardView" class="view-section active">
+        <header class="view-header">
+          <h2>오늘의 요약 <span class="badge" id="dashYearBadge">2026</span></h2>
+          <p class="subtitle">마감 임박 업무와 오늘 주목해야 할 학생을 확인하세요.</p>
+        </header>
+        
+        <div class="dashboard-grid">
+          <!-- Task Summary -->
+          <article class="dash-card">
+            <div class="dash-card-header">
+              <h3>마감 임박 업무</h3>
+              <button class="text-button" onclick="document.querySelector('[data-target=taskView]').click()">모두 보기 &rarr;</button>
+            </div>
+            <div class="dash-card-body" id="dashTaskList">
+              <!-- Task items will be injected here -->
+            </div>
+          </article>
+
+          <!-- Class Summary -->
+          <article class="dash-card">
+            <div class="dash-card-header">
+              <h3>학급 관리 알림</h3>
+              <button class="text-button" onclick="document.querySelector('[data-target=classView]').click()">모두 보기 &rarr;</button>
+            </div>
+            <div class="dash-card-body" id="dashClassList">
+              <!-- Class alert items will be injected here -->
+            </div>
+          </article>
         </div>
-
-        <form id="loginForm" class="login-panel" aria-labelledby="loginTitle">
-          <div>
-            <p class="eyebrow">Login</p>
-            <h2 id="loginTitle">로그인</h2>
-          </div>
-
-          <label for="userId">아이디</label>
-          <input
-            id="userId"
-            name="userId"
-            type="text"
-            autocomplete="username"
-            placeholder="admin 또는 10101"
-            required
-          />
-
-          <label for="password">비밀번호</label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            autocomplete="current-password"
-            placeholder="비밀번호"
-            required
-          />
-
-          <p id="loginMessage" class="form-message" role="alert" aria-live="polite"></p>
-          <button class="primary-button" type="submit">로그인</button>
-        </form>
       </section>
 
-      <section id="studentView" class="hidden" aria-live="polite"></section>
-      <section id="adminView" class="hidden" aria-live="polite"></section>
+      <!-- CLASS MANAGEMENT VIEW -->
+      <section id="classView" class="view-section hidden">
+        <header class="view-header">
+          <h2>학급 관리 <span class="badge" id="classYearBadge">2026</span></h2>
+          <p class="subtitle">학생 관찰 및 상담 기록 타임라인 (직접 식별 정보 입력 금지)</p>
+        </header>
+
+        <div class="split-layout">
+          <aside class="sidebar">
+            <div class="sidebar-header">
+              <h3>익명 학생 목록</h3>
+            </div>
+            <ul class="student-list" id="studentList">
+              <!-- Student list injected here -->
+            </ul>
+          </aside>
+
+          <div class="main-content">
+            <div id="studentDetailArea" class="hidden">
+              <div class="student-header">
+                <h3 id="detailStudentName">학생 ID</h3>
+                <span class="status-badge" id="detailStudentStatus">상태</span>
+              </div>
+
+              <!-- Add Record Form -->
+              <div class="record-form-panel">
+                <div class="privacy-alert">
+                  <strong>주의:</strong> 이름, 연락처 등 개인 식별 정보를 포함하지 마세요.
+                </div>
+                <form id="recordForm">
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="recordDate">날짜</label>
+                      <input type="date" id="recordDate" required />
+                    </div>
+                    <div class="form-group">
+                      <label for="recordCategory">카테고리</label>
+                      <select id="recordCategory">
+                        <option value="상담">상담</option>
+                        <option value="관찰">관찰</option>
+                        <option value="지도">지도</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="recordContent">내용 (익명화 필수)</label>
+                    <textarea id="recordContent" rows="3" placeholder="예: 교우관계 갈등으로 상담 진행. 해결책 모색..." required></textarea>
+                  </div>
+                  <div class="form-row align-end">
+                    <label class="checkbox-label">
+                      <input type="checkbox" id="privacyCheck" required /> 개인 식별 정보를 포함하지 않았습니다.
+                    </label>
+                    <button type="submit" class="primary-button">기록 저장</button>
+                  </div>
+                </form>
+              </div>
+
+              <!-- Timeline -->
+              <div class="timeline-area">
+                <h4>누적 기록</h4>
+                <div class="timeline" id="recordTimeline">
+                  <!-- Records injected here -->
+                </div>
+              </div>
+            </div>
+            
+            <div id="emptyStudentSelection" class="empty-state">
+              <p>좌측에서 학생을 선택해주세요.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TASK MANAGEMENT VIEW -->
+      <section id="taskView" class="view-section hidden">
+        <header class="view-header">
+          <div class="view-header-title">
+            <h2>업무 관리 <span class="badge" id="taskYearBadge">2026</span></h2>
+            <p class="subtitle">체크리스트 기반 업무 및 루틴 템플릿 재사용</p>
+          </div>
+          <div class="view-actions">
+            <button class="secondary-button" id="btnImportRoutine">3월 개학루틴 불러오기</button>
+            <button class="primary-button" id="btnAddTask">+ 새 업무</button>
+          </div>
+        </header>
+
+        <!-- Add/Edit Task Form (Hidden by default) -->
+        <div id="taskFormPanel" class="task-form-panel hidden">
+          <h3 id="taskFormTitle">새 업무 추가</h3>
+          <form id="taskForm">
+            <input type="hidden" id="taskId" />
+            <div class="form-row">
+              <div class="form-group" style="flex: 2;">
+                <label for="taskTitle">업무명</label>
+                <input type="text" id="taskTitle" required placeholder="업무 제목을 입력하세요" />
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label for="taskDue">마감일</label>
+                <input type="date" id="taskDue" />
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="ghost-button" id="btnCancelTask">취소</button>
+              <button type="submit" class="primary-button">저장</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="task-board">
+          <div class="task-column">
+            <h3>진행중 <span class="count" id="countTodo">0</span></h3>
+            <div class="task-list" id="listTodo">
+              <!-- Tasks injected here -->
+            </div>
+          </div>
+          <div class="task-column">
+            <h3>완료 <span class="count" id="countDone">0</span></h3>
+            <div class="task-list" id="listDone">
+              <!-- Tasks injected here -->
+            </div>
+          </div>
+        </div>
+      </section>
+
     </main>
 
     <script src="app.js"></script>
